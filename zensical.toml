@@ -1,0 +1,100 @@
+[project]
+site_name = "编程笔记"
+site_description = "我的编程笔记"
+site_author = "Palemoky"
+site_url = "https://programming.palemoky.com"
+repo_url = "https://github.com/palemoky/programming"
+repo_name = "palemoky"
+edit_uri = "edit/main/docs/"
+copyright = "Copyright &copy; <span id='copyright-year'>2026</span> Palemoky"
+extra_javascript = [
+  "assets/javascripts/mathjax.js",
+  "https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js",
+  "assets/javascripts/width-toggle.js",
+]
+extra_css = ["assets/stylesheets/extra.css"]
+nav = [
+  { "首页" = "index.md" },
+  { "Python" = "python/README.md" },
+  { "Golang" = "golang/README.md" },
+  { "Rust" = "rust/README.md" },
+  # { "C" = "c/README.md" },
+  # { "PHP" = "php/README.md" },
+]
+
+[project.theme]
+variant = "modern"
+language = "zh"
+primary = "white"
+accent = "blue"
+custom_dir = "overrides"
+favicon = "assets/logo.webp"
+logo = "assets/logo.webp"
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.action.view",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.tooltips",
+  "content.footnote.tooltips",
+  "navigation.expand",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.instant.progress",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.tabs",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "search.share",
+  "search.suggest",
+  "toc.follow",
+]
+
+icon = { repo = "fontawesome/brands/github", edit = "lucide/file-edit" }
+palette = [
+  { scheme = "default", toggle.icon = "lucide/sun", toggle.name = "Switch to dark mode" },
+  { scheme = "slate", toggle.icon = "lucide/moon", toggle.name = "Switch to light mode" },
+]
+
+[project.markdown_extensions]
+attr_list = {}
+md_in_html = {}
+tables = {}
+admonition = {}
+footnotes = {}
+abbr = {}
+def_list = {}
+toc.permalink = true
+toc.slugify = { object = "pymdownx.slugs.slugify", kwds = { case = "lower" } }
+
+[project.markdown_extensions.zensical.extensions.glightbox]
+
+[project.markdown_extensions.pymdownx]
+arithmatex = { generic = true }
+betterem = { smart_enable = "none" }
+caret = {}
+details = {}
+emoji = { emoji_generator = "zensical.extensions.emoji.to_svg", emoji_index = "zensical.extensions.emoji.twemoji" }
+highlight.pygments_lang_class = true
+inlinehilite = {}
+keys = {}
+mark = {}
+smartsymbols = {}
+superfences = {}
+tabbed = { alternate_style = true }
+tasklist = { custom_checkbox = true }
+tilde = {}
+magiclink = {}
+blocks.caption = {}
+
+[project.extra]
+generator = false
+social = [
+  { icon = "fontawesome/brands/github", link = "https://github.com/palemoky" },
+  { icon = "fontawesome/solid/code", link = "https://algo.palemoky.com" },
+  { icon = "fontawesome/solid/feather", link = "https://poetry.palemoky.com" },
+  { icon = "fontawesome/solid/feather-pointed", link = "https://blog.palemoky.com" },
+]
