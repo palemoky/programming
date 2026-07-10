@@ -1,0 +1,27 @@
+# MkDocs / Zensical
+site/
+main.py
+uv.lock
+pyproject.toml 
+.python-version
+.venv
+.cache
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+
+# Temporary files
+*.tmp
+*.temp
