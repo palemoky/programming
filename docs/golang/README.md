@@ -1,5 +1,37 @@
 # Golang
 
+## 基础
+### 数据类型
+
+```go
+bool                                          // 不允许将布尔型强制转换
+string                                        // go 中通过反引号`表示语法块
+int  int8  int16  int32(rune)  int64          // go 中不允许将整型强制转换为布尔型；rune 代表了一个 Unicode 字符
+uint uint8(byte) uint16 uint32 uint64 uintptr // byte 代表一个 ASCII 字符；由于uint8的取值范围是 0~255，因此也可以很好的表示RGB十进制的取值范围；uintptr 被设定为足够存放一个指针
+                                              // int 与 uint 自适应32与64位平台
+byte                                          // uint8 的别名，表示一个 ASCII 字符
+rune                                          // int32 的别名，表示一个 Unicode 码点（UTF-8字符）
+float32 float64                               // 应该尽可能使用 float64，因为 math 包中所有有关数学运算的函数都会要求接收这个类型
+                                              // float32占用 4 字节（单精度），float64则占用 8 字节（双精度），指数和小数默认为float64
+complex64 complex128                          // 复数类型，分别表示 32/64 位实数和虚数，complex128 为复数的默认类型
+```
+
+### make & new
+
+|              | `make()`                              | `new()`                             |
+|--------------|---------------------------------------|-------------------------------------|
+| **适用类型** | 引用类型：`slice`、`map`、`channel`   | 值类型：`int`、`string`、`struct` 等 |
+| **返回值**   | 已初始化的类型本身                    | 指向零值的指针 `*T`                 |
+| **使用频率** | 常用                                  | 极少（`var` 声明已自动初始化为零值）|
+
+**注意：**
+- 引用类型零值为 `nil`，未经 `make` 初始化直接赋值会引发 `panic: assignment to entry in nil map`
+- `cap()` 查看容量，`len()` 查看长度（均适用于 `make` 类型）
+- `for...range` 可遍历所有 `make` 类型：
+  - `slice` / `array`：返回 `(index, value)`
+  - `map`：返回 `(key, value)`
+  - `channel`：返回 `(value, ok)`，`ok` 表示通道是否已关闭
+
 ## 标准库
 
 ### 文本与字符串
@@ -37,7 +69,7 @@
     - `context.WithValue()`：创建携带键值对的 context，用于传递请求级数据
 
 ### 文件系统
-- `io`：最核心的I/O抽象接口，如`io.Reader`, `io.Writer`, `io.Closer`，常用函数`io.ReadAll()`, `io.Copy()`
+- `io`：最核心的 I/O 抽象接口，如`io.Reader`, `io.Writer`, `io.Closer`，常用函数`io.ReadAll()`, `io.Copy()`
 - `os`：跨平台的文件操作、环境变量读取、进程交互等，常用函数 `os.Open()`, `os.ReadFile()`, `os.WriteFile()`, `os.Getenv()`, `os.MkdirAll()`
 - `bufio`：包装 `io.Reader`/`io.Writer` 提供带缓冲区的读写，常用函数 `bufio.NewScanner()`, `bufio.NewReader()`
 - `path/filepath`：处理文件路径，如`filepath.Join()`, `filepath.Split()`, `filepath.Abs()`, `filepath.Ext()`
@@ -79,7 +111,7 @@
     - `math.MaxInt64`, `math.MaxFloat64`, `math.Pi`, `math.E` 等常量
     - `math.Abs()`, `math.Pow()`, `math.Sqrt()` 等数学函数
 - `math/rand/v2`：普通业务逻辑的随机数生成，如生成随机数验证码、抽奖等
-- `crypto/rand`：密码学安全的随机数生成，如生成UUID、密钥、加密随机数等
+- `crypto/rand`：密码学安全的随机数生成，如生成 UUID、密钥、加密随机数等
 
 ### 日志
 - `log/slog`：结构化日志库（支持 JSON 格式输出、日志级别控制、Key-Value 键值对日志）
@@ -138,3 +170,12 @@
 - `work`：方便在本地同时修改和调试多个相互依赖的 Go 模块
 - `clean`：清理编译产生的临时文件、对象文件和缓存
 - `fix`：自动修复（不推荐直接使用，容易破坏代码逻辑）
+
+## 底层原理
+
+- [Go语言原本](https://golang.design/under-the-hood/)
+- [Go语言101](https://gfw.go101.org/article/101.html)
+
+### GMP
+### GC
+### 调度器
