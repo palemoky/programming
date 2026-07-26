@@ -23,6 +23,23 @@ float32 float64                               // 应该尽可能使用 float64�
 complex64 complex128                          // 复数类型，分别表示 32/64 位实数和虚数，complex128 为复数的默认类型
 ```
 
+值类型与引用类型：
+
+- **值类型**：基本类型（`int`、`float64`、`bool`、`byte`、`rune` 等）、`string`、`array`、`struct`、复数；
+- **引用类型**：`slice`、`map`、`channel`、`pointer`、`function`、`interface`。引用类型的零值为 `nil`
+
+在Go中，值分配在栈还是堆是由编译器逃逸分析确定的，而非简单通过数据类型确定。比如体积很大的数组、在闭包中被捕获并修改的变量、指针被返回、变量在返回后被引用等情况，都会被分配到堆上。
+
+常见使用坑点：
+
+- **`map`**：未用 `make` 初始化的 `nil map` 可以安全读取，但**写入**（`m[k] = v`）会直接引发 `panic`。
+- **`channel`**：对 `nil channel` 进行读写会导致**永久阻塞**（非 panic）；`close(nil)` 会引发 `panic`。
+- **指针 / 函数 / 接口**：未初始化的 `nil` 值在执行**解引用 (`*p`)**、**直接调用 (`fn()`)** 或**调用接口方法 (`i.Method()`)** 时会引发 `panic`。
+- **`slice`**：`nil slice` 可以安全使用 `append()` 追加元素，无需特意 `make`。
+
+
+**一切都是值传递**
+
 ### make & new
 
 |              | `make()`                              | `new()`                             |
@@ -39,6 +56,61 @@ complex64 complex128                          // 复数类型，分别表示 32/
   - `slice` / `array`：返回 `(index, value)`
   - `map`：返回 `(key, value)`
   - `channel`：返回 `(value, ok)`，`ok` 表示通道是否已关闭
+
+### defer
+
+在 Go 中，`return` 并不是一个原子操作，它的执行过程可以拆分为以下三个步骤：
+
+1. 返回值赋值（将返回值写入保存返回值的内存区域）
+2. 执行 `defer` 函数（按后进先出 LIFO 的顺序依次执行）
+3. 真正的函数返回（执行汇编指令 RET，将控制权交还给调用者）
+
+因此，`defer` 的执行时机介于“返回值赋值”和“真正的函数返回”之间。
+
+<table>
+<tr>
+  <th>匿名返回值</th>
+  <th>具名返回值</th>
+  <th>返回值为指针</th>
+</tr>
+<tr>
+<td valign="top">
+```go
+func f1() int {
+    x := 5
+    defer func() {
+        // 修改的是局部变量 x，而不是返回值
+        x++
+    }()
+    return x
+}
+```
+</td>
+<td valign="top">
+```go
+func f2() (x int) {
+    x = 5
+    defer func() {
+        // 修改的是具名返回值 x
+        x++
+    }()
+    return x
+}
+```
+</td>
+<td valign="top">
+```go
+func f3() *int {
+    x := 5
+    defer func() {
+        x++
+    }()
+    return &x
+}
+```
+</td>
+</tr>
+</table>
 
 ## 标准库
 
@@ -151,6 +223,8 @@ complex64 complex128                          // 复数类型，分别表示 32/
         - `-w`：去掉 DWARF 调试信息
         - `-s`：移除符号表和调试信息
     - **`-race`**：开启竞态检测
+    - **`-gcflags`**：传递参数给 Go 编译器
+        - **`-m`**：变量逃逸分析
     - `-trimpath`：移除源码路径（推荐生产环境使用）
     - `-x`：打印编译时调用的底层指令
 - **`mod`**
@@ -196,9 +270,11 @@ Go 采用线程缓存分配（Thread-Caching Malloc，**TCMalloc**），将对�
 | Central Cache（mcentral） | ❌  | ✅  | 共享的中层缓存 |
 | Page Heap（mheap） | ❌  | ✅  | 管理大对象与页级内存 |
 
+> Go 运行时的堆内存分配机制（如 mcache 和 mcentral）是线程安全的，goroutine 间无需额外锁即可安全分配内存。
+
 #### 变量逃逸分析
 - 函数变量的内存默认会分配在栈上，栈的分配与回收都非常迅速；堆适合不可预知大小的内存分配，可动态扩张或缩减。当进程调用 `malloc` 等函数分配内存时，新分配的内存就被动态加入到堆上。当利用 `free` 等函数释放内存时，被释放的内存从堆中被剔除。但是为此付出的代价是分配速度较慢，而且会形成内存碎片。
-- Go通过编译器分析代码的特征和代码的生命周期，决定应该使用堆还是栈来进行内存分配。
+- Go 通过编译器分析代码的特征和代码的生命周期，决定应该使用堆还是栈来进行内存分配。
 - **如果变量在函数外部没有引用，则优先放在栈中；否则放在堆中**；如果编译器无法确定是否被外部引用，同样会放在堆内存中，如 `interface{}`
 
 #### GC
@@ -238,6 +314,14 @@ GC 的触发条件有两个：
 2. 达到定时时间
 
 ![GC演进](imgs/gc_evolution_timeline.webp)
+
+#### 常见的内存泄露场景
+
+1. 无缓冲 Channel 向无接收者的 channel 发送数据，或从无发送者的 channel 接收数据且无 select default/timeout
+2. 读写 nil channel 导致 Goroutine 永久挂起
+3. sync.WaitGroup 的 Add 和 Done 计数不匹配导致 Wait() 永远阻塞
+4. slice 截取大数组，如 `hugeSlice[:2]` 导致对底层的大数组的指针引用，无法回收，应该使用 `append([]T(nil), hugeSlice[:2]...)` 或 `slices.Clone()` 深拷贝所需数据
+5. 资源未被关闭，如HTTP Response Body、文件、数据库连接等
 
 ### 调度器
 
