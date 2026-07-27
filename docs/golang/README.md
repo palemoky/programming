@@ -5,7 +5,7 @@
 - [Effective Go](https://go.dev/doc/effective_go)
 - [Go at Google](https://go.dev/talks/2012/splash.article)
 
-less is more：编译为本地机器码、带垃圾回收、静态类型；一套极简的 语法（仅 25 个关键字，少到能一口气背完）；以 CSP 为蓝本的并发；以组合而非继承为骨架的类型系统；以及对工具链与构建速度的 极度重视。
+Less is more：编译为本地机器码、带垃圾回收、静态类型；一套极简的语法（仅 25 个关键字）；以 CSP 为蓝本的并发；以组合而非继承为骨架的类型系统；以及对工具链与构建速度的 极度重视。
 
 ## 基础
 ### 数据类型
@@ -37,10 +37,55 @@ complex64 complex128                          // 复数类型，分别表示 32/
 - **指针 / 函数 / 接口**：未初始化的 `nil` 值在执行**解引用 (`*p`)**、**直接调用 (`fn()`)** 或**调用接口方法 (`i.Method()`)** 时会引发 `panic`。
 - **`slice`**：`nil slice` 可以安全使用 `append()` 追加元素，无需特意 `make`。
 
+!!! tip "一切都是值传递"
 
-**一切都是值传递**
+    Go 中所有的函数参数传递都是值传递，要么是值的副本，要么是指针的副本（引用类型的底层结构包含指针，因此会复制指针传递）。
+
+在 Go 中，只有 `sync.Map`、`sync.Pool`、`channel`、`atomic` 是并发安全的，大多数类型都不是并发安全的，并发读写时需要通过 `sync.Mutex`、`sync/atomic`、`channel` 等手段进行同步保护。
+
+### 字符串构建
+
+**strings.Builder** 用于专门高效构建字符串，**bytes.Buffer** 则用于通用字节流缓冲，由于实现了 `io.Reader` 和 `io.Writer` 接口，支持 `Read()`、`Write()`、`Bytes()`、`String()` 等方法。两者都避免了多次创建新 string 的性能损耗。
+
+<table>
+<tr>
+  <th>strings.Builder</th>
+  <th>bytes.Buffer</th>
+</tr>
+<tr>
+<td valign="top">
+```go
+var b strings.Builder
+b.WriteString("hello")
+s := b.String()
+```
+</td>
+<td valign="top">
+```go
+var b bytes.Buffer
+b.Write([]byte("hello"))
+data := b.Bytes()
+```
+</td>
+</tr>
+</table>
+
+### struct
+
+`struct` 可以当作面向对象中的类：
+
+- 结构体里的字段（field）≈ 类的属性（成员变量）
+- 绑定在结构体上的方法（method）≈ 类的方法（成员函数）
+- 结构体实例（instance）≈ 类创建出来的对象（object）
+
+`struct{}` 是空结构体类型，不占用内存空间，常见用法：
+
+- 用 `map[K]struct{}` 模拟 set（零内存开销的 value）
+- 用 `chan struct{}` 作为纯信号通道
 
 ### make & new
+
+`make()` 用于初始化并分配内存，`new()` 只分配内存但不初始化。
 
 |              | `make()`                              | `new()`                             |
 |--------------|---------------------------------------|-------------------------------------|
@@ -215,11 +260,27 @@ goroutine 泄露可通过 `pprof` 调试。
 
 发生`panic`时可以使用`recover`捕获，比如处理用户请求时，捕获`panic`并返回500。
 
+### 闭包
+
+闭包引用的外部变量会发生逃逸。
+
+使用场景：
+
+1. goroutine 携带上下文
+2. 保存计数器
+3. HTTP 中间件
+
 ## 标准库
 
 ### 文本与字符串
 - `fmt`：格式化输出，常用函数`fmt.Println()`, `fmt.Sprintf()`, `fmt.Printf()`, `fmt.Errorf()`
-- `strings`：字符串处理，常用函数 `strings.Contains()`, `strings.Split()`, `strings.Join()`, `strings.ReplaceAll()`, `strings.HasPrefix()`
+- `strings`：字符串处理，常用函数
+    - `strings.Builder`：字符串构建器，避免多次创建新的 string
+    - `strings.Contains()`：判断字符串是否包含另一个字符串
+    - `strings.Split()`：分割字符串
+    - `strings.Join()`：连接字符串
+    - `strings.ReplaceAll()`：替换字符串
+    - `strings.HasPrefix()`：判断字符串是否以某个前缀开头
 - `strconv`：字符串与基本类型间的类型转换
     - `strconv.Atoi()`：字符串转整数
     - `strconv.Itoa()`：整数转字符串
@@ -361,7 +422,32 @@ goroutine 泄露可通过 `pprof` 调试。
 - [Go语言原本](https://golang.design/under-the-hood/)
 - [Go语言101](https://gfw.go101.org/article/101.html)
 
+### slice
 
+```go
+// runtime/slice.go
+type slice struct {
+        array unsafe.Pointer // 元素指针
+        len   int // 长度 
+        cap   int // 容量
+}
+```
+
+slice 是底层数组的一个窗口。如果 slice 引用了一个大数组的片段，即使只用到其中很小一部分，整个大数组也无法被 GC 回收。可以用 `copy()` 复制所需数据来断开引用。
+
+`append` 在容量足够时不会分配新数组，而是直接在底层数组上写入，可能意外修改其他共享该数组的 slice：
+```go
+s := []int{10, 20, 30, 40, 50}
+s1 := s[1:3]          // s1: [20, 30], len=2, cap=4
+s1 = append(s1, 60)   // s1: [20, 30, 60], 修改了底层数组 s
+s2 := s[2:4]          // s2: [30, 60], s: [10, 20, 30, 60, 50]
+```
+
+### map
+
+### channel
+
+### context
 
 ### 内存
 
@@ -462,3 +548,17 @@ GC 的触发条件有两个：
     <figcaption>非阻塞调用</figcaption>
   </figure>
 </div>
+
+## 版本变化
+
+| 版本 | 时间 | 重要变化 |
+| --- | --- | --- |
+| **1.5** | 2015.08 | 编译器和运行时从 C 改为 Go 实现（自举）；实验性 vendor 目录支持 |
+| **1.11** | 2018.08 | 引入 **Go Modules**（实验性）；支持 WebAssembly |
+| **1.13** | 2019.09 | `fmt.Errorf` 支持 `%w` 错误包装；Module 代理和校验数据库上线 |
+| **1.16** | 2021.02 | Modules 默认开启，废弃 `GOPATH` 模式；`go:embed` 嵌入静态文件 |
+| **1.18** | 2022.03 | **泛型**（Type Parameters）；内置 Fuzzing 测试；Go Workspaces |
+| **1.21** | 2023.08 | PGO（Profile-Guided Optimization）正式可用；新增 `slog`、`slices`、`maps` 标准库 |
+| **1.22** | 2024.02 | 修复循环变量捕获问题（每次迭代独立变量）；`for range` 支持整数 |
+| **1.23** | 2024.08 | 迭代器（`iter` 包）；修复 `time.Timer`/`Ticker` 未 `Stop` 时无法被 GC 回收的泄漏问题 |
+| **1.24** | 2025.02 | 泛型类型别名；`go.mod` 中可直接声明工具依赖（`tool` 指令） |
