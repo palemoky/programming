@@ -112,6 +112,109 @@ func f3() *int {
 </tr>
 </table>
 
+### interface
+
+Go中的接口是隐式实现。
+
+在以下情况使用指针接收者：
+
+- 需要修改接收者的内部状态 / 字段
+- 结构体体积较大（性能考虑）
+- 结构体包含“不可复制”的字段（如并发锁）
+- 如果一个类型中有“至少一个”方法使用了指针接收者，那么该类型的“所有方法”都应该统一使用指针接收者。
+
+Go官方建议：如果不确定用哪个，优先选择指针接收者。
+
+!!! info "鸭子类型"
+
+    如果一个东西走起来像鸭子，叫起来像鸭子，游泳也像鸭子，那么我们就把它当作鸭子。
+    
+    意思是：不用检查鸭子的身份证，只看它表现出来的行为。不需要声明实现接口，只看方法是否满足接口要求。
+
+Go中接口类型的值才会同时存储「类型信息 + 值信息」，而其他类型在编译期就已经确定，运行时不需要再带类型信息。
+
+Go中常见的接口类型有：`error`、`io.Reader/io.Writer`、`context.Context`、`http.Handler`、`json.Marshaler/json.Unmarshaler`。
+
+### 死锁
+
+死锁（deadlock）本质是：一组 goroutine **互相等待某个永远不会发生的事件**，导致所有相关 goroutine 无法继续执行。死锁发生时，程序会卡住，且 **不会有任何错误或堆栈**。
+
+Go 里最常见的死锁场景主要集中在：锁、`channel`、`WaitGroup`、资源顺序。
+
+#### 锁
+
+1. 重复加锁
+
+```go
+func main() {
+    var mu sync.Mutex
+
+    mu.Lock()
+    defer mu.Unlock()
+
+    mu.Lock() // 死锁
+}
+```
+
+2. 忘记解锁
+
+```go
+func update() {
+    mu.Lock()
+
+    doSomething()
+
+    // 忘记 Unlock()
+}
+```
+
+3. 两把锁互相等待
+
+goroutine 1：
+```go
+a.Lock()
+b.Lock()
+```
+
+goroutine 2：
+```go
+b.Lock()
+a.Lock()
+```
+
+导致相互持有对方的锁，永远等待。解决方式则是规定锁的顺序，比如固定先加 a 锁，再加 b 锁。
+
+#### channel
+
+1. Channel 无人发送
+2. 无缓冲 Channel 无人接收
+3. Channel 缓冲区满
+4. 从未关闭channel导致等待
+    
+#### 其他
+
+1. 忘记 `Done()` 导致 `wg.Wait()` 永久等待
+2. `select {}` 导致永久阻塞
+
+### goroutine 泄露
+
+1. 没有向channel发送数据或关闭channel，导致goroutine无法退出
+2. HTTP 请求中启动后台 goroutine，没有取消机制
+3. `time.Ticker` 没有 Stop
+
+goroutine 泄露可通过 `pprof` 调试。
+
+### 引发panic
+
+1. 数组越界
+2. 空指针解引用
+3. 对 nil map 写入
+4. 向已关闭的channel发送
+5. 重复关闭channel
+6. WaitGroup 负计数
+
+发生`panic`时可以使用`recover`捕获，比如处理用户请求时，捕获`panic`并返回500。
+
 ## 标准库
 
 ### 文本与字符串
