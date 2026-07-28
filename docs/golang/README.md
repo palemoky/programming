@@ -503,6 +503,16 @@ map 的扩容是渐进式的，会在每次写入操作时，搬迁一两个旧�
 
 ### channel
 
+CSP（Communicating Sequential Processes，通信顺序进程）并发编程模型，其核心思想是：通过通信共享内存，而不是通过共享内存来通信。Go 语言的Goroutine 和 Channel机制，就是 CSP 的经典实现，
+
+Channel的底层是一个名为`hchan`的结构体，核心包含几个关键组件：
+
+- **环形缓冲区**（暂存数据）：有缓冲channel内部维护一个固定大小的**环形队列**，用`buf`指针指向缓冲区，`sendx`和`recvx`分别记录发送和接收的位置索引。这样设计能高效利用内存，避免数据搬移。
+- **等待队列**（暂存阻塞的 goroutine）：`sendq`和`recvq`用来管理阻塞的goroutine。`sendq`存储因channel满而阻塞的发送者，`recvq`存储因channel空而阻塞的接收者。这些队列用**双向链表**实现，当条件满足时会唤醒对应的goroutine。
+- **互斥锁**（并发安全）：`hchan`内部有个`mutex`，所有的发送、接收操作都需要先获取锁，用来保证并发安全。虽然看起来可能影响性能，但Go的调度器做了优化，大多数情况下锁竞争并不激烈。
+
+![hchan](imgs/hchan.webp){ width=80% }
+
 ```go
 type hchan struct {
         // chan 里元素数量
@@ -530,6 +540,69 @@ type hchan struct {
         // 保护 hchan 中所有字段
         lock mutex
 }
+```
+
+以容量为 2 的 buffered channel 为例，说明 channel 的发送和接收过程：
+```go
+ch := make(chan int, 2) // 缓冲区大小 2
+```
+
+初始状态
+```
+环形缓冲区: [ _ , _ ]   sendx=0, recvx=0, qcount=0
+sendq: 空
+recvq: 空
+```
+
+1. G1 发送 `ch <- 10` — 缓冲区有空位，数据直接写入 buf
+```
+环形缓冲区: [ 10 , _ ]   sendx=1, recvx=0, qcount=1
+sendq: 空
+recvq: 空
+```
+2. G2 发送 `ch <- 20` — 缓冲区还有一个空位，继续写入
+```
+环形缓冲区: [ 10 , 20 ]   sendx=0(回绕), recvx=0, qcount=2
+sendq: 空
+recvq: 空
+```
+3. G3 发送 `ch <- 30` — 缓冲区已满！G3 阻塞，挂入 sendq
+```
+环形缓冲区: [ 10 , 20 ]   sendx=0, recvx=0, qcount=2
+sendq: [G3(数据=30)]     ← G3 被挂起，连同要发送的数据一起记录
+recvq: 空
+```
+4. G4 接收 `v := <-ch` — 从 buf 取出数据，同时唤醒 sendq 中的 G3
+```
+1. G4 从 recvx=0 取出 10，v = 10
+2. 缓冲区腾出一个位置
+3. 从 sendq 取出 G3，把 G3 的数据 30 写入缓冲区
+4. 唤醒 G3
+
+环形缓冲区: [ 30 , 20 ]   sendx=1, recvx=1, qcount=2
+sendq: 空                ← G3 已被唤醒
+recvq: 空
+```
+5. G5 接收 `v := <-ch` — 从 buf 取出数据
+```
+G5 从 recvx=1 取出 20，v = 20
+环形缓冲区: [ 30 , _ ]   sendx=1, recvx=0(回绕), qcount=1
+sendq: 空
+recvq: 空
+```
+6. G6 接收 `v := <-ch` — 缓冲区还有数据
+```
+G6 从 recvx=0 取出 30，v = 30
+
+环形缓冲区: [ _ , _ ]   sendx=1, recvx=1, qcount=0
+sendq: 空
+recvq: 空
+```
+7. G7 接收 `v := <-ch` — 缓冲区空了！G7 阻塞，挂入 recvq
+```
+环形缓冲区: [ _ , _ ]   sendx=1, recvx=1, qcount=0
+sendq: 空
+recvq: [G7]           ← G7 被挂起等待数据
 ```
 
 ### context
@@ -591,9 +664,9 @@ GC 的触发条件有两个：
 
 #### 常见的内存泄露场景
 
-1. 无缓冲 Channel 向无接收者的 channel 发送数据，或从无发送者的 channel 接收数据且无 select default/timeout
+1. 无缓冲 Channel 向无接收者的 channel 发送数据，或从无发送者的 channel 接收数据且无 `select default/timeout`
 2. 读写 nil channel 导致 Goroutine 永久挂起
-3. sync.WaitGroup 的 Add 和 Done 计数不匹配导致 Wait() 永远阻塞
+3. `sync.WaitGroup` 的 `Add` 和 `Done` 计数不匹配导致 `Wait()` 永远阻塞
 4. slice 截取大数组，如 `hugeSlice[:2]` 导致对底层的大数组的指针引用，无法回收，应该使用 `append([]T(nil), hugeSlice[:2]...)` 或 `slices.Clone()` 深拷贝所需数据
 5. 资源未被关闭，如HTTP Response Body、文件、数据库连接等
 
