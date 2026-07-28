@@ -443,9 +443,94 @@ s1 = append(s1, 60)   // s1: [20, 30, 60], 修改了底层数组 s
 s2 := s[2:4]          // s2: [30, 60], s: [10, 20, 30, 60, 50]
 ```
 
+需要注意的是，`s[a:b:c]` 这样的写法，`c` 在 Python 中表示步长，而 Go 中表示容量上界索引，结果 slice 的 `cap = c - a`。这常用于限制 slice 容量，防止 `append` 意外覆盖底层数组的后续元素。
+
+!!! info "三段式切片可以超出 len 但不能超出 cap"
+
+    对 slice 再次切片时，索引上界是 `cap` 而非 `len`，因此可以「看到」原 slice 长度之外、容量之内的元素：
+
+    ```go
+    slice := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+    s1 := slice[2:5]  // [2, 3, 4],        len=3, cap=8
+    s2 := s1[2:6:7]   // [4, 5, 6, 7],     len=4, cap=5
+    //         ↑ 超出了 s1 的 len(3)，但未超出 cap(8)
+    ```
+
 ### map
 
+Map 的核心结构包括 hmap 和 bmap。它在运行时表现为一个指向 hmap 结构体的指针，hmap 中记录了桶数组指针 buckets、溢出桶指针以及元素个数等字段。每个桶是一个 bmap 结构体，能存储 8 个键值对和 8 个 tophash，并有指向下一个溢出桶的指针 overflow。为了内存紧凑，bmap 中采用的是先存 8 个键再存 8 个值的存储方式。
+
+<div class="grid cards" markdown>
+- <figure>
+    ![hmap](imgs/hmap.webp)
+    <figcaption>hmap结构</figcaption>
+  </figure>
+- <figure>
+    ![bmap](imgs/bmap.webp)
+    <figcaption>bmap结构</figcaption>
+  </figure>
+</div>
+
+```go
+// A header for a Go map.
+type hmap struct {
+   count     int    // map中元素个数
+   flags     uint8  // 状态标志位，标记map的一些状态
+   B         uint8  // 桶数以2为底的对数，即B=log_2(len(buckets))，比如B=3，那么桶数为2^3=8
+   noverflow uint16 // 溢出桶数量近似值
+   hash0     uint32 // 哈希种子
+
+   buckets    unsafe.Pointer // 指向buckets数组的指针
+   oldbuckets unsafe.Pointer // 是一个指向buckets数组的指针，在扩容时，oldbuckets 指向老的buckets数组(大小为新buckets数组的一半)，非扩容时，oldbuckets 为空
+   nevacuate  uintptr        // 表示扩容进度的一个计数器，小于该值的桶已经完成迁移
+
+   extra *mapextra // 指向mapextra 结构的指针，mapextra 存储map中的溢出桶
+}
+```
+
+由于map扩容会发生 key 的搬迁，导致顺序不稳定，因此Go在遍历时引入随机数，避免开发者依赖map的遍历顺序。
+
+哈希冲突时需要比较 key 来定位正确的键值对，因此 map 的 key 必须是可比较的类型（支持 `==`），如 `slice`、`map`、`func` 不能作为 key。
+
+map 插入新 key 时，如果符合以下条件，则会触发扩容：
+
+- 装载因子超过阈值时，触发双倍扩容
+- overflow 的 bucket 数量过多时，触发等量扩容
+
+map 的扩容是渐进式的，会在每次写入操作时，搬迁一两个旧桶的数据，以便分摊扩容开销，避免单次操作延迟过高。
+
+无法对 map 的 key 或 value 进行取址。会发生编译报错，这样设计主要是因为map一旦发生扩容，key 和 value 的位置就会改变，之前保存的地址也就失效了。
+
 ### channel
+
+```go
+type hchan struct {
+        // chan 里元素数量
+        qcount   uint
+        // chan 底层循环数组的长度
+        dataqsiz uint
+        // 指向底层循环数组的指针
+        // 只针对有缓冲的 channel
+        buf      unsafe.Pointer
+        // chan 中元素大小
+        elemsize uint16
+        // chan 是否被关闭的标志
+        closed   uint32
+        // chan 中元素类型
+        elemtype *_type // element type
+        // 已发送元素在循环数组中的索引
+        sendx    uint   // send index
+        // 已接收元素在循环数组中的索引
+        recvx    uint   // receive index
+        // 等待接收的 goroutine 队列
+        recvq    waitq  // list of recv waiters
+        // 等待发送的 goroutine 队列
+        sendq    waitq  // list of send waiters
+
+        // 保护 hchan 中所有字段
+        lock mutex
+}
+```
 
 ### context
 
