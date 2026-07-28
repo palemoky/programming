@@ -678,6 +678,11 @@ Go 采用线程缓存分配（Thread-Caching Malloc，**TCMalloc**），将对�
 
 #### GC
 
+![gc](imgs/gc.webp){ align=right width=30% }
+Go 的 GC 采用三色标记和混合写屏障实现。如果在整个标记期间都 STW，会导致明显的暂停延迟，因此 Go 仅在标记的开始（开启写屏障）和结束（确认标记完成）有短暂的 STW，而并发标记期间通过混合写屏障跟踪业务 goroutine 对引用关系的修改，保证标记的准确性。
+
+<div style="clear: both;"></div>
+
 三色标记法的操作步骤为：
 
 1. 新创建的对象默认颜色均为白色
