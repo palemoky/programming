@@ -30,6 +30,8 @@ complex64 complex128                          // 复数类型，分别表示 32/
 
 在Go中，值分配在栈还是堆是由编译器逃逸分析确定的，而非简单通过数据类型确定。比如体积很大的数组、在闭包中被捕获并修改的变量、指针被返回、变量在返回后被引用等情况，都会被分配到堆上。
 
+`slice`、`map`、`function` 类型不能比较，只能和`nil`比较。
+
 常见使用坑点：
 
 - **`map`**：未用 `make` 初始化的 `nil map` 可以安全读取，但**写入**（`m[k] = v`）会直接引发 `panic`。
@@ -159,7 +161,39 @@ func f3() *int {
 
 ### interface
 
+Go中接口类型的值才会同时存储「类型信息 + 值信息」，而其他类型在编译期就已经确定，运行时不需要再带类型信息。
+
+Go中常见的接口类型有：`error`、`io.Reader/io.Writer`、`context.Context`、`http.Handler`、`json.Marshaler/json.Unmarshaler`。
+
 Go中的接口是隐式实现。
+
+!!! info "鸭子类型"
+
+    如果一个东西走起来像鸭子，叫起来像鸭子，游泳也像鸭子，那么我们就把它当作鸭子。
+    
+    意思是：不用检查鸭子的身份证，只看它表现出来的行为。不需要声明实现接口，只看方法是否满足接口要求。
+
+Go中的接口值时钟可以用`==`比较（编译期不会报错），但结果取决于底层动态类型和值：
+
+| 情况                                                     | 结果                           |
+| -------------------------------------------------------- | ------------------------------ |
+| 两个都是 `nil`                                           | `true`                         |
+| 动态类型不同                                             | `false`（不 `panic`）           |
+| 动态类型相同且类型可比较                                 | 比较动态值，返回 `true` / `false` |
+| 动态类型相同但类型不可比较（如 `slice`、`map`、`func`） | `runtime panic` ⚠️            |
+
+### 反射
+
+Go中的反射通过接口实现，一个接口变量分别包含指向**类型信息**和**实际数据**的指针。当我们将一个具体类型的变量赋值给一个接口时，Go 语言就可以通过 `reflect` 包的 `TypeOf` 和 `ValueOf` 这两个函数读取接口变量里的类型信息和数据信息。
+
+常见的反射应用：
+
+- **JSON 序列化：** 通过反射动态获取结构体字段信息，实现任意类型的序列化和反序列化。
+- **ORM（对象关系映射）：** 通过反射动态构建 SQL 语句，实现任意结构体的数据库操作。
+- **Web框架参数绑定：** 如Gin 框架的`ShouldBind`方法，能够根据请求类型自动将 HTTP 参数绑定到结构体字段上，这背后就是通过反射实现的类型转换和赋值。
+- **配置文件解析、RPC 调用、测试框架等：** Viper 配置库用反射将配置映射到结构体，gRPC 通过反射实现服务注册和方法调用。
+
+### 接收者
 
 在以下情况使用指针接收者：
 
@@ -170,15 +204,7 @@ Go中的接口是隐式实现。
 
 Go官方建议：如果不确定用哪个，优先选择指针接收者。
 
-!!! info "鸭子类型"
 
-    如果一个东西走起来像鸭子，叫起来像鸭子，游泳也像鸭子，那么我们就把它当作鸭子。
-    
-    意思是：不用检查鸭子的身份证，只看它表现出来的行为。不需要声明实现接口，只看方法是否满足接口要求。
-
-Go中接口类型的值才会同时存储「类型信息 + 值信息」，而其他类型在编译期就已经确定，运行时不需要再带类型信息。
-
-Go中常见的接口类型有：`error`、`io.Reader/io.Writer`、`context.Context`、`http.Handler`、`json.Marshaler/json.Unmarshaler`。
 
 ### 死锁
 
@@ -607,6 +633,29 @@ recvq: [G7]           ← G7 被挂起等待数据
 
 ### context
 
+取消信号的传播是通过 Context 的层级结构实现的，父 Context 取消时，所有子 Context 都会自动取消。
+
+Context 提供了以下 4 种方法：
+
+```go
+type Context interface {
+    Deadline() (deadline time.Time, ok bool)  // 第一个返回值是 Context 的截止时间点（绝对时间），第二个返回值代表该 Context 是否被设置了超时时间
+    Done() <-chan struct{}                    // Done() 返回一个只读 channel，当这个 channel 被关闭时，说明这个 context 被取消
+    Err() error                               // Err() 返回一个错误，表示 channel 被关闭的原因，例如是被取消，还是超时关闭
+    Value(key interface{}) interface{}        // Value 方法返回指定 key 对应的 value，这是 context 携带的值
+}
+```
+
+`Context.Value` 的查找过程是一个链式递归查找的过程，从当前 Context 开始，沿着父 Context 链一直向上查找直到找到对应的 key 或者到达根 Context。
+
+
+
+### sync.Map
+
+`sync.Map` 适合**读多写少**的场景，其核心是空间换时间的思想，通过 `read` 和 `dirty` 两个 `map` 实现 "读写分离"，最终达到针对特定场景的 “读” 操作无锁优化。
+
+![sync.Map](imgs/sync_map.webp)
+
 ### 内存
 
 Go 采用线程缓存分配（Thread-Caching Malloc，**TCMalloc**），将对象根据大小分类，并设计多层级（线程缓存、中心缓存、页堆）的组件提高内存分配器的性能。
@@ -619,7 +668,10 @@ Go 采用线程缓存分配（Thread-Caching Malloc，**TCMalloc**），将对�
 
 > Go 运行时的堆内存分配机制（如 mcache 和 mcentral）是线程安全的，goroutine 间无需额外锁即可安全分配内存。
 
+![tcmalloc](imgs/tcmalloc.webp)
+
 #### 变量逃逸分析
+
 - 函数变量的内存默认会分配在栈上，栈的分配与回收都非常迅速；堆适合不可预知大小的内存分配，可动态扩张或缩减。当进程调用 `malloc` 等函数分配内存时，新分配的内存就被动态加入到堆上。当利用 `free` 等函数释放内存时，被释放的内存从堆中被剔除。但是为此付出的代价是分配速度较慢，而且会形成内存碎片。
 - Go 通过编译器分析代码的特征和代码的生命周期，决定应该使用堆还是栈来进行内存分配。
 - **如果变量在函数外部没有引用，则优先放在栈中；否则放在堆中**；如果编译器无法确定是否被外部引用，同样会放在堆内存中，如 `interface{}`
@@ -662,12 +714,12 @@ GC 的触发条件有两个：
 
 ![GC演进](imgs/gc_evolution_timeline.webp)
 
-#### 常见的内存泄露场景
+#### 内存泄露
 
-1. 无缓冲 Channel 向无接收者的 channel 发送数据，或从无发送者的 channel 接收数据且无 `select default/timeout`
-2. 读写 nil channel 导致 Goroutine 永久挂起
-3. `sync.WaitGroup` 的 `Add` 和 `Done` 计数不匹配导致 `Wait()` 永远阻塞
-4. slice 截取大数组，如 `hugeSlice[:2]` 导致对底层的大数组的指针引用，无法回收，应该使用 `append([]T(nil), hugeSlice[:2]...)` 或 `slices.Clone()` 深拷贝所需数据
+1. goroutine 泄漏：无缓冲 Channel 向无接收者的 channel 发送数据，或从无发送者的 channel 接收数据且无 `select default/timeout`
+2. slice 引用大数组：如 `hugeSlice[:2]` 导致对底层的大数组的指针引用，无法回收，应该使用 `append([]T(nil), hugeSlice[:2]...)` 或 `slices.Clone()` 深拷贝所需数据
+3. map 元素过多：map 中删除元素只是标记删除，底层 bucket 不会缩减。如果 map 曾经很大后来元素减少，内存占用仍然很高。
+4. `sync.WaitGroup` 的 `Add` 和 `Done` 计数不匹配导致 `Wait()` 永远阻塞
 5. 资源未被关闭，如HTTP Response Body、文件、数据库连接等
 
 ### 调度器
@@ -684,7 +736,7 @@ GC 的触发条件有两个：
 - 调度器的设计策略（[视频教程](https://www.bilibili.com/video/BV19r4y1w7Nx?p=1)）
     - 任务窃取调度器：
         - 基于工作窃取的多线程调度器将每一个线程绑定到了独立的 CPU 上，这些线程会被不同处理器管理，不同的处理器通过工作窃取对任务进行再分配实现任务的平衡，也能提升调度器和 Go 语言程序的整体性能。
-        - 窃取任务时，**先从全局**队列获取，**再从其它本地队列**窃取，这样是为了**防止全局队列中的任务饥饿**
+        - 调度顺序：本地队列 -> 全局队列 -> 网络轮询器（`netpoll`）-> 其他队列窃取一半
         - 在某些情况下，Goroutine 不会让出线程，进而造成饥饿问题。
         - 时间过长的STW会导致程序长时间无法工作
     - 抢占式调度器：
@@ -696,6 +748,10 @@ GC 的触发条件有两个：
     - G0：启动 M 时，第一个创建的协程，每个 M都有属于自己的 G0。G0 仅用于调度其它协程，G0 不执行任何函数
 ![go func () 调度流程](imgs/gmp_scheduler_workflow.webp)
 
+!!! question "GMP 能不能去掉 P 层？"
+
+    如果去掉P，直接变成 GM 模型，所有 M 都需要从全局队列中获取 goroutine，这就需要全局锁保护。这样会引入大量的锁竞争，导致调度器的性能下降。
+
 <div class="grid cards" markdown>
 - <figure>
     ![阻塞调用](imgs/gmp_syscall_blocking.webp)
@@ -706,6 +762,17 @@ GC 的触发条件有两个：
     <figcaption>非阻塞调用</figcaption>
   </figure>
 </div>
+
+#### Mutex
+
+Go 的 `Mutex` 主要有两种模式：
+
+| 模式 | 原理 | 优点 | 缺点 |
+|------|------|------|------|
+| 正常 | 通过新到的Goroutine自旋来避免频繁唤醒和睡眠Goroutine的开销 | 吞吐量高 | 队列尾端任务延迟 |
+| 饥饿 | 新到的Goroutine在队列中排队 | 公平 | 吞吐量低 |
+
+`Mutex` 不断在这两种模式中切换，当等待队列头部的 `goroutine` 等待时间超过 1ms 时，切换到饥饿模式；当获得锁的 `waiter` 是最后一个等待者、或其等待时间不足 1ms 时，切换回正常模式。
 
 ## 版本变化
 
