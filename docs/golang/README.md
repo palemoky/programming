@@ -28,7 +28,7 @@ complex64 complex128                          // 复数类型，分别表示 32/
 - **值类型**：基本类型（`int`、`float64`、`bool`、`byte`、`rune` 等）、`string`、`array`、`struct`、复数；
 - **引用类型**：`slice`、`map`、`channel`、`pointer`、`function`、`interface`。引用类型的零值为 `nil`
 
-在Go中，值分配在栈还是堆是由编译器逃逸分析确定的，而非简单通过数据类型确定。比如体积很大的数组、在闭包中被捕获并修改的变量、指针被返回、变量在返回后被引用等情况，都会被分配到堆上。
+在Go中，**值分配在栈还是堆是由编译器逃逸分析确定的，而非简单通过数据类型确定**。比如体积很大的数组、在闭包中被捕获并修改的变量、指针被返回、变量在返回后被引用等情况，都会被分配到堆上。
 
 `slice`、`map`、`function` 类型不能比较，只能和`nil`比较。
 
@@ -294,6 +294,13 @@ channel 在Go中有多种应用场景：
     func (m Mutex) Unlock() { m <- struct{}{} } // 归还钥匙
     ```
 
+close 的语义就是发送方宣告「我发完了」，不是资源释放——channel 和普通对象一样由 GC 回收，不关也不泄漏。
+
+需要调用 close 的3种情况：
+1. 接收方用 `for range` 或 `v, ok := <-ch`，因为`range` 会一直循环到 channel 关闭为止，不关就是死锁
+2. 广播退出信号，因为关闭是唯一能一次唤醒 N 个接收者的手段，发送做不到（发一次只有一个人收到）
+3. 多路 select 里需要感知某个源结束
+
 ### 死锁
 
 死锁（deadlock）本质是：一组 goroutine **互相等待某个永远不会发生的事件**，导致所有相关 goroutine 无法继续执行。死锁发生时，程序会卡住，且 **不会有任何错误或堆栈**。
@@ -359,7 +366,7 @@ Go 里最常见的死锁场景主要集中在：锁、`channel`、`WaitGroup`、
 
 1. 没有向channel发送数据或关闭channel，导致goroutine无法退出
 2. HTTP 请求中启动后台 goroutine，没有取消机制
-3. `time.Ticker` 没有 Stop
+3. `time.Ticker` 没有 Stop （<= Go 1.22）
 
 goroutine 泄露可通过 `pprof` 调试。
 
@@ -418,7 +425,7 @@ goroutine 泄露可通过 `pprof` 调试。
     - `sync.WaitGroup`：等待一组 goroutine 全部完成
     - `sync.Map`：并发安全的 map
     - `sync.Pool`：并发安全的对象池，可复用临时对象以减少 GC 压力，如在高并发 HTTP 服务中复用 `bytes.Buffer`
-    - `sync.Cond`：条件变量，与锁（`sync.Mutex` / `sync.RWMutex`）配合使用，用于 Goroutine 间的等待与通知同步（支持单发 `Signal()` 和广播 `Broadcast()`）
+    - `sync.Cond`：条件变量，与锁（`sync.Mutex` / `sync.RWMutex`）配合使用，用于 Goroutine 间的等待与通知同步（支持单发 `Signal()` 和广播 `Broadcast()`），在需要重复广播时使用
 - `sync/atomic`：原子操作，常用函数 `atomic.AddInt64()`, `atomic.LoadInt64()`, `atomic.CompareAndSwapInt64()`
 - `context`：在 goroutine 间传递截止时间、取消信号和请求级数据
     - `context.Background()`：返回空的根 context，通常作为顶层起点
@@ -614,7 +621,7 @@ map 插入新 key 时，如果符合以下条件，则会触发扩容：
 
 map 的扩容是渐进式的，会在每次写入操作时，搬迁一两个旧桶的数据，以便分摊扩容开销，避免单次操作延迟过高。
 
-无法对 map 的 key 或 value 进行取址。会发生编译报错，这样设计主要是因为map一旦发生扩容，key 和 value 的位置就会改变，之前保存的地址也就失效了。
+**无法对 map 的 key 或 value 进行取址，会发生编译报错。**这样设计主要是因为map一旦发生扩容，key 和 value 的位置就会改变，之前保存的地址也就失效了。
 
 ### channel
 
@@ -722,7 +729,7 @@ recvq: [G7]           ← G7 被挂起等待数据
 
 ### context
 
-取消信号的传播是通过 Context 的层级结构实现的，父 Context 取消时，所有子 Context 都会自动取消。
+取消信号的传播是通过 Context 的层级结构实现的，**父 Context 取消时，所有子 Context 都会自动取消**。
 
 Context 提供了以下 4 种方法：
 
@@ -735,7 +742,7 @@ type Context interface {
 }
 ```
 
-`Context.Value` 的查找过程是一个链式递归查找的过程，从当前 Context 开始，沿着父 Context 链一直向上查找直到找到对应的 key 或者到达根 Context。
+`Context.Value` 的查找过程是一个链式递归查找的过程，从当前 Context 开始，沿着父 Context 链一直**向上查找**，直到找到对应的 key 或者到达根 Context。
 
 
 
@@ -830,7 +837,7 @@ GC 的触发条件有两个：
 - 调度器的设计策略（[视频教程](https://www.bilibili.com/video/BV19r4y1w7Nx?p=1)）
     - 任务窃取调度器：
         - 基于工作窃取的多线程调度器将每一个线程绑定到了独立的 CPU 上，这些线程会被不同处理器管理，不同的处理器通过工作窃取对任务进行再分配实现任务的平衡，也能提升调度器和 Go 语言程序的整体性能。
-        - 调度顺序：本地队列 -> 全局队列 -> 网络轮询器（`netpoll`）-> 其他队列窃取一半
+        - 调度顺序：**本地队列 -> 全局队列 -> 网络轮询器（`netpoll`）-> 其他队列窃取一半**
         - 在某些情况下，Goroutine 不会让出线程，进而造成饥饿问题。
         - 时间过长的STW会导致程序长时间无法工作
     - 抢占式调度器：
