@@ -204,7 +204,95 @@ Go中的反射通过接口实现，一个接口变量分别包含指向**类型�
 
 Go官方建议：如果不确定用哪个，优先选择指针接收者。
 
+### channel
 
+channel 在Go中有多种应用场景：
+
+=== "信号通知"
+
+    子 Goroutine 任务完成后，通过 Channel 向主 Goroutine 发送信号。
+
+    ```go
+    func main() {
+        done := make(chan struct{}) // 使用 struct{} 不占内存
+
+        go func() {
+            fmt.Println("正在处理后台任务...")
+            time.Sleep(1 * time.Second)
+            done <- struct{}{} // 发送完成信号
+        }()
+
+        <-done // 阻塞等待信号
+        fmt.Println("任务完成，主程序退出")
+    }
+    ```
+
+=== "收集结果与任务分发"
+
+    生产者-消费者模式和 Worker Pool（工作池） 模式，分发 N 个任务给 M 个 Worker，并通过 Channel 汇总所有 Worker 的处理结果。
+    
+    ```go
+    func worker(id int, jobs <-chan int, results chan<- int) {
+        for j := range jobs { // 自动消费直至 jobs 被 close
+            results <- j * 2 // 收集计算结果
+        }
+    }
+
+    func main() {
+        jobs := make(chan int, 100)
+        results := make(chan int, 100)
+
+        // 启动 3 个 worker
+        for w := 1; w <= 3; w++ {
+            go worker(w, jobs, results)
+        }
+
+        // 下发 5 个任务
+        for j := 1; j <= 5; j++ {
+            jobs <- j
+        }
+        close(jobs) // 关闭任务通道，通知 worker 退出
+
+        // 收集 5 个结果
+        for a := 1; a <= 5; a++ {
+            fmt.Println("Result:", <-results)
+        }
+    }
+    ```
+
+=== "控制并发数量"
+
+    ```go
+    func main() {
+        maxConcurrency := 3
+        sem := make(chan struct{}, maxConcurrency) // 限制最大并发数为 3
+
+        for i := 1; i <= 10; i++ {
+            sem <- struct{}{} // 缓冲区满时会阻塞，实现并发控制
+            go func(id int) {
+                defer func() { <-sem }() // 任务完成后释放令牌
+                
+                fmt.Printf("正在执行任务 %d\n", id)
+                time.Sleep(1 * time.Second)
+            }(i)
+        }
+    }
+    ```
+
+=== "充当互斥锁"
+
+    ```go
+    type Mutex chan struct{}
+
+    func NewMutex() Mutex {
+        ch := make(chan struct{}, 1)
+        ch <- struct{}{} // 放入一把钥匙
+        return ch
+    }
+
+    func (m Mutex) Lock()   { <-m } // 抢钥匙
+    func (m Mutex) Unlock() { m <- struct{}{} } // 归还钥匙
+    ```
 
 ### 死锁
 
@@ -330,6 +418,7 @@ goroutine 泄露可通过 `pprof` 调试。
     - `sync.WaitGroup`：等待一组 goroutine 全部完成
     - `sync.Map`：并发安全的 map
     - `sync.Pool`：并发安全的对象池，可复用临时对象以减少 GC 压力，如在高并发 HTTP 服务中复用 `bytes.Buffer`
+    - `sync.Cond`：条件变量，与锁（`sync.Mutex` / `sync.RWMutex`）配合使用，用于 Goroutine 间的等待与通知同步（支持单发 `Signal()` 和广播 `Broadcast()`）
 - `sync/atomic`：原子操作，常用函数 `atomic.AddInt64()`, `atomic.LoadInt64()`, `atomic.CompareAndSwapInt64()`
 - `context`：在 goroutine 间传递截止时间、取消信号和请求级数据
     - `context.Background()`：返回空的根 context，通常作为顶层起点
