@@ -302,46 +302,46 @@ Go 里最常见的死锁场景主要集中在：锁、`channel`、`WaitGroup`、
 
 #### 锁
 
-1. 重复加锁
+=== "重复加锁"
 
-```go
-func main() {
-    var mu sync.Mutex
+    ```go
+    func main() {
+        var mu sync.Mutex
 
-    mu.Lock()
-    defer mu.Unlock()
+        mu.Lock()
+        defer mu.Unlock()
 
-    mu.Lock() // 死锁
-}
-```
+        mu.Lock() // 死锁
+    }
+    ```
 
-2. 忘记解锁
+=== "忘记解锁"
 
-```go
-func update() {
-    mu.Lock()
+    ```go
+    func update() {
+        mu.Lock()
 
-    doSomething()
+        doSomething()
 
-    // 忘记 Unlock()
-}
-```
+        // 忘记 Unlock()
+    }
+    ```
 
-3. 两把锁互相等待
+=== "两把锁互相等待"
 
-goroutine 1：
-```go
-a.Lock()
-b.Lock()
-```
+    goroutine 1：
+    ```go
+    a.Lock()
+    b.Lock()
+    ```
 
-goroutine 2：
-```go
-b.Lock()
-a.Lock()
-```
+    goroutine 2：
+    ```go
+    b.Lock()
+    a.Lock()
+    ```
 
-导致相互持有对方的锁，永远等待。解决方式则是规定锁的顺序，比如固定先加 a 锁，再加 b 锁。
+    导致相互持有对方的锁，永远等待。解决方式则是规定锁的顺序，比如固定先加 a 锁，再加 b 锁。
 
 #### channel
 
