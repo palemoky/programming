@@ -2,6 +2,7 @@
 nav = [
   { "首页" = "index.md" },
   { "编程语言" = [
+    {"编程语言"="language/README.md"},
     { "Python" = "language/python/README.md" },
     { "Golang" = "language/golang/README.md" },
     { "Rust" = "language/rust/README.md" },
@@ -9,16 +10,19 @@ nav = [
     # { "PHP" = "language/php/README.md" },
   ] },
   { "数据库" = [
+    {"数据库"="database/README.md"},
     { "MySQL" = "database/mysql/README.md" },
     { "Redis" = "database/redis/README.md" },
   ] },
   { "中间件" = [
+    {"中间件"="middleware/README.md"},
     { "Kafka" = "middleware/kafka/README.md" },
     { "RabbitMQ" = "middleware/rabbitmq/README.md" },
   ] },
   { "分布式系统" = [
-    { "稳定性" = "" },
-    { "可观测性" = "" },
+    {"分布式系统"="distributed/README.md"},
+    { "稳定性" = "distributed/stability/README.md" },
+    { "可观测性" = "distributed/observability/README.md" },
   ] },
 ]
 site_name = "编程笔记"
