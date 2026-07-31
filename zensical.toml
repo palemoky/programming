@@ -15,11 +15,27 @@ extra_javascript = [
 extra_css = ["assets/stylesheets/extra.css"]
 nav = [
   { "首页" = "index.md" },
-  { "Python" = "python/README.md" },
-  { "Golang" = "golang/README.md" },
-  { "Rust" = "rust/README.md" },
-  # { "C" = "c/README.md" },
-  # { "PHP" = "php/README.md" },
+  { "编程语言" = [
+    { "Python" = "language/python/README.md" },
+    { "Golang" = "language/golang/README.md" },
+    { "Rust" = "language/rust/README.md" },
+    # { "C" = "language/c/README.md" },
+    # { "PHP" = "language/php/README.md" },
+  ] },
+  {
+    "数据库" = [
+      { "MySQL" = "database/mysql/README.md" },
+      { "Redis" = "database/redis/README.md" },
+    ],
+    "中间件" = [
+      { "Kafka" = "middleware/kafka/README.md" },
+      { "RabbitMQ" = "middleware/rabbitmq/README.md" },
+    ],
+    "分布式系统" = [
+      { "稳定性" = ""},
+      { "可观测性" = ""},
+    ],
+  },
 ]
 
 [project.theme]
