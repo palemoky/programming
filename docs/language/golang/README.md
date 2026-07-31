@@ -14,12 +14,12 @@ Less is more：编译为本地机器码、带垃圾回收、静态类型；一�
 bool                                          // 不允许将布尔型强制转换
 string                                        // go 中通过反引号`表示语法块
 int  int8  int16  int32(rune)  int64          // go 中不允许将整型强制转换为布尔型；rune 代表了一个 Unicode 字符
-uint uint8(byte) uint16 uint32 uint64 uintptr // byte 代表一个 ASCII 字符；由于uint8的取值范围是 0~255，因此也可以很好的表示RGB十进制的取值范围；uintptr 被设定为足够存放一个指针
-                                              // int 与 uint 自适应32与64位平台
+uint uint8(byte) uint16 uint32 uint64 uintptr // byte 代表一个 ASCII 字符；由于 uint8 的取值范围是 0~255，因此也可以很好的表示 RGB 十进制的取值范围；uintptr 被设定为足够存放一个指针
+                                              // int 与 uint 自适应 32 与 64 位平台
 byte                                          // uint8 的别名，表示一个 ASCII 字符
-rune                                          // int32 的别名，表示一个 Unicode 码点（UTF-8字符）
+rune                                          // int32 的别名，表示一个 Unicode 码点（UTF-8 字符）
 float32 float64                               // 应该尽可能使用 float64，因为 math 包中所有有关数学运算的函数都会要求接收这个类型
-                                              // float32占用 4 字节（单精度），float64则占用 8 字节（双精度），指数和小数默认为float64
+                                              // float32 占用 4 字节（单精度），float64 则占用 8 字节（双精度），指数和小数默认为 float64
 complex64 complex128                          // 复数类型，分别表示 32/64 位实数和虚数，complex128 为复数的默认类型
 ```
 
@@ -28,7 +28,7 @@ complex64 complex128                          // 复数类型，分别表示 32/
 - **值类型**：基本类型（`int`、`float64`、`bool`、`byte`、`rune` 等）、`string`、`array`、`struct`、复数；
 - **引用类型**：`slice`、`map`、`channel`、`pointer`、`function`、`interface`。引用类型的零值为 `nil`
 
-在Go中，**值分配在栈还是堆是由编译器逃逸分析确定的，而非简单通过数据类型确定**。比如体积很大的数组、在闭包中被捕获并修改的变量、指针被返回、变量在返回后被引用等情况，都会被分配到堆上。
+在 Go 中，**值分配在栈还是堆是由编译器逃逸分析确定的，而非简单通过数据类型确定**。比如体积很大的数组、在闭包中被捕获并修改的变量、指针被返回、变量在返回后被引用等情况，都会被分配到堆上。
 
 `slice`、`map`、`function` 类型不能比较，只能和`nil`比较。
 
@@ -161,11 +161,11 @@ func f3() *int {
 
 ### interface
 
-Go中接口类型的值才会同时存储「类型信息 + 值信息」，而其他类型在编译期就已经确定，运行时不需要再带类型信息。
+Go 中接口类型的值才会同时存储「类型信息 + 值信息」，而其他类型在编译期就已经确定，运行时不需要再带类型信息。
 
-Go中常见的接口类型有：`error`、`io.Reader/io.Writer`、`context.Context`、`http.Handler`、`json.Marshaler/json.Unmarshaler`。
+Go 中常见的接口类型有：`error`、`io.Reader/io.Writer`、`context.Context`、`http.Handler`、`json.Marshaler/json.Unmarshaler`。
 
-Go中的接口是隐式实现。
+Go 中的接口是隐式实现。
 
 !!! info "鸭子类型"
 
@@ -173,7 +173,7 @@ Go中的接口是隐式实现。
     
     意思是：不用检查鸭子的身份证，只看它表现出来的行为。不需要声明实现接口，只看方法是否满足接口要求。
 
-Go中的接口值时钟可以用`==`比较（编译期不会报错），但结果取决于底层动态类型和值：
+Go 中的接口值时钟可以用`==`比较（编译期不会报错），但结果取决于底层动态类型和值：
 
 | 情况                                                     | 结果                           |
 | -------------------------------------------------------- | ------------------------------ |
@@ -184,13 +184,13 @@ Go中的接口值时钟可以用`==`比较（编译期不会报错），但结�
 
 ### 反射
 
-Go中的反射通过接口实现，一个接口变量分别包含指向**类型信息**和**实际数据**的指针。当我们将一个具体类型的变量赋值给一个接口时，Go 语言就可以通过 `reflect` 包的 `TypeOf` 和 `ValueOf` 这两个函数读取接口变量里的类型信息和数据信息。
+Go 中的反射通过接口实现，一个接口变量分别包含指向**类型信息**和**实际数据**的指针。当我们将一个具体类型的变量赋值给一个接口时，Go 语言就可以通过 `reflect` 包的 `TypeOf` 和 `ValueOf` 这两个函数读取接口变量里的类型信息和数据信息。
 
 常见的反射应用：
 
 - **JSON 序列化：** 通过反射动态获取结构体字段信息，实现任意类型的序列化和反序列化。
 - **ORM（对象关系映射）：** 通过反射动态构建 SQL 语句，实现任意结构体的数据库操作。
-- **Web框架参数绑定：** 如Gin 框架的`ShouldBind`方法，能够根据请求类型自动将 HTTP 参数绑定到结构体字段上，这背后就是通过反射实现的类型转换和赋值。
+- **Web 框架参数绑定：** 如 Gin 框架的`ShouldBind`方法，能够根据请求类型自动将 HTTP 参数绑定到结构体字段上，这背后就是通过反射实现的类型转换和赋值。
 - **配置文件解析、RPC 调用、测试框架等：** Viper 配置库用反射将配置映射到结构体，gRPC 通过反射实现服务注册和方法调用。
 
 ### 接收者
@@ -202,11 +202,11 @@ Go中的反射通过接口实现，一个接口变量分别包含指向**类型�
 - 结构体包含“不可复制”的字段（如并发锁）
 - 如果一个类型中有“至少一个”方法使用了指针接收者，那么该类型的“所有方法”都应该统一使用指针接收者。
 
-Go官方建议：如果不确定用哪个，优先选择指针接收者。
+Go 官方建议：如果不确定用哪个，优先选择指针接收者。
 
 ### channel
 
-channel 在Go中有多种应用场景：
+channel 在 Go 中有多种应用场景：
 
 === "信号通知"
 
@@ -296,7 +296,7 @@ channel 在Go中有多种应用场景：
 
 close 的语义就是发送方宣告「我发完了」，不是资源释放——channel 和普通对象一样由 GC 回收，不关也不泄漏。
 
-需要调用 close 的3种情况：
+需要调用 close 的 3 种情况：
 1. 接收方用 `for range` 或 `v, ok := <-ch`，因为`range` 会一直循环到 channel 关闭为止，不关就是死锁
 2. 广播退出信号，因为关闭是唯一能一次唤醒 N 个接收者的手段，发送做不到（发一次只有一个人收到）
 3. 多路 select 里需要感知某个源结束
@@ -355,7 +355,7 @@ Go 里最常见的死锁场景主要集中在：锁、`channel`、`WaitGroup`、
 1. Channel 无人发送
 2. 无缓冲 Channel 无人接收
 3. Channel 缓冲区满
-4. 从未关闭channel导致等待
+4. 从未关闭 channel 导致等待
     
 #### 其他
 
@@ -364,22 +364,22 @@ Go 里最常见的死锁场景主要集中在：锁、`channel`、`WaitGroup`、
 
 ### goroutine 泄露
 
-1. 没有向channel发送数据或关闭channel，导致goroutine无法退出
+1. 没有向 channel 发送数据或关闭 channel，导致 goroutine 无法退出
 2. HTTP 请求中启动后台 goroutine，没有取消机制
-3. `time.Ticker` 没有 Stop （<= Go 1.22）
+3. `time.Ticker` 没有 Stop（<= Go 1.22）
 
 goroutine 泄露可通过 `pprof` 调试。
 
-### 引发panic
+### 引发 panic
 
 1. 数组越界
 2. 空指针解引用
 3. 对 nil map 写入
-4. 向已关闭的channel发送
-5. 重复关闭channel
+4. 向已关闭的 channel 发送
+5. 重复关闭 channel
 6. WaitGroup 负计数
 
-发生`panic`时可以使用`recover`捕获，比如处理用户请求时，捕获`panic`并返回500。
+发生`panic`时可以使用`recover`捕获，比如处理用户请求时，捕获`panic`并返回 500。
 
 ### 闭包
 
@@ -541,8 +541,8 @@ goroutine 泄露可通过 `pprof` 调试。
 
 ## 底层原理
 
-- [Go语言原本](https://golang.design/under-the-hood/)
-- [Go语言101](https://gfw.go101.org/article/101.html)
+- [Go 语言原本](https://golang.design/under-the-hood/)
+- [Go 语言 101](https://gfw.go101.org/article/101.html)
 
 ### slice
 
@@ -585,32 +585,32 @@ Map 的核心结构包括 hmap 和 bmap。它在运行时表现为一个指向 h
 <div class="grid cards" markdown>
 - <figure>
     ![hmap](imgs/hmap.webp)
-    <figcaption>hmap结构</figcaption>
+    <figcaption>hmap 结构</figcaption>
   </figure>
 - <figure>
     ![bmap](imgs/bmap.webp)
-    <figcaption>bmap结构</figcaption>
+    <figcaption>bmap 结构</figcaption>
   </figure>
 </div>
 
 ```go
 // A header for a Go map.
 type hmap struct {
-   count     int    // map中元素个数
-   flags     uint8  // 状态标志位，标记map的一些状态
-   B         uint8  // 桶数以2为底的对数，即B=log_2(len(buckets))，比如B=3，那么桶数为2^3=8
+   count     int    // map 中元素个数
+   flags     uint8  // 状态标志位，标记 map 的一些状态
+   B         uint8  // 桶数以 2 为底的对数，即 B=log_2(len(buckets))，比如 B=3，那么桶数为 2^3=8
    noverflow uint16 // 溢出桶数量近似值
    hash0     uint32 // 哈希种子
 
-   buckets    unsafe.Pointer // 指向buckets数组的指针
-   oldbuckets unsafe.Pointer // 是一个指向buckets数组的指针，在扩容时，oldbuckets 指向老的buckets数组(大小为新buckets数组的一半)，非扩容时，oldbuckets 为空
+   buckets    unsafe.Pointer // 指向 buckets 数组的指针
+   oldbuckets unsafe.Pointer // 是一个指向 buckets 数组的指针，在扩容时，oldbuckets 指向老的 buckets 数组 (大小为新 buckets 数组的一半)，非扩容时，oldbuckets 为空
    nevacuate  uintptr        // 表示扩容进度的一个计数器，小于该值的桶已经完成迁移
 
-   extra *mapextra // 指向mapextra 结构的指针，mapextra 存储map中的溢出桶
+   extra *mapextra // 指向 mapextra 结构的指针，mapextra 存储 map 中的溢出桶
 }
 ```
 
-由于map扩容会发生 key 的搬迁，导致顺序不稳定，因此Go在遍历时引入随机数，避免开发者依赖map的遍历顺序。
+由于 map 扩容会发生 key 的搬迁，导致顺序不稳定，因此 Go 在遍历时引入随机数，避免开发者依赖 map 的遍历顺序。
 
 哈希冲突时需要比较 key 来定位正确的键值对，因此 map 的 key 必须是可比较的类型（支持 `==`），如 `slice`、`map`、`func` 不能作为 key。
 
@@ -621,17 +621,17 @@ map 插入新 key 时，如果符合以下条件，则会触发扩容：
 
 map 的扩容是渐进式的，会在每次写入操作时，搬迁一两个旧桶的数据，以便分摊扩容开销，避免单次操作延迟过高。
 
-**无法对 map 的 key 或 value 进行取址，会发生编译报错。**这样设计主要是因为map一旦发生扩容，key 和 value 的位置就会改变，之前保存的地址也就失效了。
+**无法对 map 的 key 或 value 进行取址，会发生编译报错。**这样设计主要是因为 map 一旦发生扩容，key 和 value 的位置就会改变，之前保存的地址也就失效了。
 
 ### channel
 
-CSP（Communicating Sequential Processes，通信顺序进程）并发编程模型，其核心思想是：通过通信共享内存，而不是通过共享内存来通信。Go 语言的Goroutine 和 Channel机制，就是 CSP 的经典实现，
+CSP（Communicating Sequential Processes，通信顺序进程）并发编程模型，其核心思想是：通过通信共享内存，而不是通过共享内存来通信。Go 语言的 Goroutine 和 Channel 机制，就是 CSP 的经典实现，
 
-Channel的底层是一个名为`hchan`的结构体，核心包含几个关键组件：
+Channel 的底层是一个名为`hchan`的结构体，核心包含几个关键组件：
 
-- **环形缓冲区**（暂存数据）：有缓冲channel内部维护一个固定大小的**环形队列**，用`buf`指针指向缓冲区，`sendx`和`recvx`分别记录发送和接收的位置索引。这样设计能高效利用内存，避免数据搬移。
-- **等待队列**（暂存阻塞的 goroutine）：`sendq`和`recvq`用来管理阻塞的goroutine。`sendq`存储因channel满而阻塞的发送者，`recvq`存储因channel空而阻塞的接收者。这些队列用**双向链表**实现，当条件满足时会唤醒对应的goroutine。
-- **互斥锁**（并发安全）：`hchan`内部有个`mutex`，所有的发送、接收操作都需要先获取锁，用来保证并发安全。虽然看起来可能影响性能，但Go的调度器做了优化，大多数情况下锁竞争并不激烈。
+- **环形缓冲区**（暂存数据）：有缓冲 channel 内部维护一个固定大小的**环形队列**，用`buf`指针指向缓冲区，`sendx`和`recvx`分别记录发送和接收的位置索引。这样设计能高效利用内存，避免数据搬移。
+- **等待队列**（暂存阻塞的 goroutine）：`sendq`和`recvq`用来管理阻塞的 goroutine。`sendq`存储因 channel 满而阻塞的发送者，`recvq`存储因 channel 空而阻塞的接收者。这些队列用**双向链表**实现，当条件满足时会唤醒对应的 goroutine。
+- **互斥锁**（并发安全）：`hchan`内部有个`mutex`，所有的发送、接收操作都需要先获取锁，用来保证并发安全。虽然看起来可能影响性能，但 Go 的调度器做了优化，大多数情况下锁竞争并不激烈。
 
 ![hchan](imgs/hchan.webp){ width=80% }
 
@@ -748,7 +748,7 @@ type Context interface {
 
 ### sync.Map
 
-`sync.Map` 适合**读多写少**的场景，其核心是空间换时间的思想，通过 `read` 和 `dirty` 两个 `map` 实现 "读写分离"，最终达到针对特定场景的 “读” 操作无锁优化。
+`sync.Map` 适合**读多写少**的场景，其核心是空间换时间的思想，通过 `read` 和 `dirty` 两个 `map` 实现 "读写分离"，最终达到针对特定场景的“读”操作无锁优化。
 
 ![sync.Map](imgs/sync_map.webp)
 
@@ -791,7 +791,7 @@ Go 的 GC 采用三色标记和混合写屏障实现。如果在整个标记期�
 ![](imgs/gc_write_barrier.webp)
 ![](imgs/gc_sweep_phase.webp)
 
-Go 1.8版本开始采用混合写屏障机制，避免了插入写屏障（结束时需要 STW 来重新扫描栈，标记栈上引用的白色对象的存活）和删除写屏障（回收精度低）的缺点，同时只在堆上启用屏障技术，栈上则不启用，整体过程几乎不需要 STW，因此效率较高
+Go 1.8 版本开始采用混合写屏障机制，避免了插入写屏障（结束时需要 STW 来重新扫描栈，标记栈上引用的白色对象的存活）和删除写屏障（回收精度低）的缺点，同时只在堆上启用屏障技术，栈上则不启用，整体过程几乎不需要 STW，因此效率较高
 
 1. GC 开始将栈上的对象全部扫描并标记为黑色 (之后不再进行第二次重复扫描，无需 STW)
 2. GC 期间，任何在栈上创建的新对象，均为黑色
@@ -799,12 +799,12 @@ Go 1.8版本开始采用混合写屏障机制，避免了插入写屏障（结�
 
 <div class="grid cards" markdown>
 - <figure>
-    ![三色标记1](imgs/gc_hybrid_wb_step1.webp)
-    <figcaption>三色标记1</figcaption>
+    ![三色标记 1](imgs/gc_hybrid_wb_step1.webp)
+    <figcaption>三色标记 1</figcaption>
   </figure>
 - <figure>
-    ![三色标记2](imgs/gc_hybrid_wb_step2.webp)
-    <figcaption>三色标记2</figcaption>
+    ![三色标记 2](imgs/gc_hybrid_wb_step2.webp)
+    <figcaption>三色标记 2</figcaption>
   </figure>
 </div>
 
@@ -813,7 +813,7 @@ GC 的触发条件有两个：
 1. 超过内存大小阈值
 2. 达到定时时间
 
-![GC演进](imgs/gc_evolution_timeline.webp)
+![GC 演进](imgs/gc_evolution_timeline.webp)
 
 #### 内存泄露
 
@@ -821,7 +821,7 @@ GC 的触发条件有两个：
 2. slice 引用大数组：如 `hugeSlice[:2]` 导致对底层的大数组的指针引用，无法回收，应该使用 `append([]T(nil), hugeSlice[:2]...)` 或 `slices.Clone()` 深拷贝所需数据
 3. map 元素过多：map 中删除元素只是标记删除，底层 bucket 不会缩减。如果 map 曾经很大后来元素减少，内存占用仍然很高。
 4. `sync.WaitGroup` 的 `Add` 和 `Done` 计数不匹配导致 `Wait()` 永远阻塞
-5. 资源未被关闭，如HTTP Response Body、文件、数据库连接等
+5. 资源未被关闭，如 HTTP Response Body、文件、数据库连接等
 
 ### 调度器
 
@@ -839,14 +839,14 @@ GC 的触发条件有两个：
         - 基于工作窃取的多线程调度器将每一个线程绑定到了独立的 CPU 上，这些线程会被不同处理器管理，不同的处理器通过工作窃取对任务进行再分配实现任务的平衡，也能提升调度器和 Go 语言程序的整体性能。
         - 调度顺序：**本地队列 -> 全局队列 -> 网络轮询器（`netpoll`）-> 其他队列窃取一半**
         - 在某些情况下，Goroutine 不会让出线程，进而造成饥饿问题。
-        - 时间过长的STW会导致程序长时间无法工作
+        - 时间过长的 STW 会导致程序长时间无法工作
     - 抢占式调度器：
         - 基于协作的抢占式调度器 - 1.2 ~ 1.13。某个协程不释放 CPU 会导致其它协程的饥饿问题
         - 基于信号的抢占式调度器 - 1.14 ~ 至今。即使某个协程不释放 CPU，也会被调度器强制释放
 
 - 调度器的启动
     - M0：程序启动后编号为 0 的第一个线程
-    - G0：启动 M 时，第一个创建的协程，每个 M都有属于自己的 G0。G0 仅用于调度其它协程，G0 不执行任何函数
+    - G0：启动 M 时，第一个创建的协程，每个 M 都有属于自己的 G0。G0 仅用于调度其它协程，G0 不执行任何函数
 ![go func () 调度流程](imgs/gmp_scheduler_workflow.webp)
 
 !!! question "GMP 能不能去掉 P 层？"
@@ -870,8 +870,8 @@ Go 的 `Mutex` 主要有两种模式：
 
 | 模式 | 原理 | 优点 | 缺点 |
 |------|------|------|------|
-| 正常 | 通过新到的Goroutine自旋来避免频繁唤醒和睡眠Goroutine的开销 | 吞吐量高 | 队列尾端任务延迟 |
-| 饥饿 | 新到的Goroutine在队列中排队 | 公平 | 吞吐量低 |
+| 正常 | 通过新到的 Goroutine 自旋来避免频繁唤醒和睡眠 Goroutine 的开销 | 吞吐量高 | 队列尾端任务延迟 |
+| 饥饿 | 新到的 Goroutine 在队列中排队 | 公平 | 吞吐量低 |
 
 `Mutex` 不断在这两种模式中切换，当等待队列头部的 `goroutine` 等待时间超过 1ms 时，切换到饥饿模式；当获得锁的 `waiter` 是最后一个等待者、或其等待时间不足 1ms 时，切换回正常模式。
 
@@ -893,4 +893,4 @@ Go 的 `Mutex` 主要有两种模式：
 
 - `gin.Context` 不是线程安全的，不能直接传递给异步的 `Goroutine`。因为 `gin` 为了减少 `GC` 压力，使用了 `sync.Pool` 复用 `Context` 对象。当请求处理结束返回后，`Context` 会被重置并放回池中，供下一个请求使用。如果异步 `Goroutine` 继续读写这个 `Context`，会导致数据竞争或拿到脏数据。
 - 洋葱模型
-    
+
