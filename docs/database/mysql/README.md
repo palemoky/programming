@@ -36,16 +36,16 @@ COMMIT;
 
 **注意事项**：悲观锁的并发性能较差，且容易引发死锁（例如两个账户互相转账时加锁顺序不一致）。对于简单扣款场景，推荐优先使用 WHERE 条件原子更新或 CAS 乐观锁。
 
-**扩展：SKIP LOCKED**
+!!! note "SKIP LOCKED"
 
-`FOR UPDATE SKIP LOCKED` 会自动跳过已被其他事务锁定的行，非常适合任务队列等"抢占式消费"场景：
+    `FOR UPDATE SKIP LOCKED` 会自动跳过已被其他事务锁定的行，非常适合任务队列等"抢占式消费"场景：
 
-```sql
-SELECT * FROM task_queue
-WHERE status = 'PENDING'
-LIMIT 1
-FOR UPDATE SKIP LOCKED;
-```
+    ```sql
+    SELECT * FROM task_queue
+    WHERE status = 'PENDING'
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED;
+    ```
 
 ### 2. WHERE 条件原子更新（推荐）
 
