@@ -21,8 +21,11 @@ nav = [
   ] },
   { "分布式系统" = [
     {"分布式系统"="distributed/README.md"},
-    { "稳定性" = "distributed/stability/README.md" },
-    { "可观测性" = "distributed/observability/README.md" },
+  ] },
+  { "服务治理" = [
+    {"服务治理"="governance/README.md"},
+    { "稳定性" = "governance/stability/README.md" },
+    { "可观测性" = "governance/observability/README.md" },
   ] },
 ]
 site_name = "编程笔记"
