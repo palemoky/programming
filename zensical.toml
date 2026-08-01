@@ -28,10 +28,10 @@ nav = [
     { "可观测性" = "governance/observability/README.md" },
   ] },
 ]
-site_name = "编程笔记"
-site_description = "我的编程笔记"
+site_name = "Tech Notes"
+site_description = "Backend engineering notes by Palemoky"
 site_author = "Palemoky"
-site_url = "https://programming.palemoky.com"
+site_url = "https://tech.palemoky.com"
 repo_url = "https://github.com/palemoky/programming"
 repo_name = "palemoky"
 edit_uri = "edit/main/docs/"
