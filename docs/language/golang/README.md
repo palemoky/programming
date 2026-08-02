@@ -4,6 +4,9 @@
 
 - [Effective Go](https://go.dev/doc/effective_go)
 - [Go at Google](https://go.dev/talks/2012/splash.article)
+- [Go Concurrency Patterns: Pipelines and cancellation](https://go.dev/blog/pipelines)
+- [Go Concurrency Patterns - Rob Pike](https://go.dev/talks/2012/concurrency.slide)
+- [Concurrency in Go](https://edu.anarcho-copy.org/Programming%20Languages/Go/Concurrency%20in%20Go.pdf)，[中文版](https://github.com/hapi666/GOBook/blob/master/Concurrency%20in%20Go%E4%B8%AD%E6%96%87%E7%89%88.pdf)
 
 Less is more：编译为本地机器码、带垃圾回收、静态类型；一套极简的语法（仅 25 个关键字）；以 CSP 为蓝本的并发；以组合而非继承为骨架的类型系统；以及对工具链与构建速度的 极度重视。
 
