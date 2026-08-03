@@ -785,7 +785,13 @@ type Context interface {
 
 `Context.Value` 的查找过程是一个链式递归查找的过程，从当前 Context 开始，沿着父 Context 链一直**向上查找**，直到找到对应的 key 或者到达根 Context。
 
+`ctx.Done()` 会在以下情况被触发（channel 被关闭）：
 
+- 手动取消（`cancel()`）
+- 超时（`WithTimeout()`）
+- 到达截止时间（`WithDeadline()`）
+- 父 Context 被取消
+- 请求被取消（HTTP / gRPC 等场景下断开连接，底层调用 `cancel()`，从而触发 `ctx.Done()`）
 
 ### sync.Map
 
