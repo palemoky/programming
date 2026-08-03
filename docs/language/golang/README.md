@@ -941,3 +941,95 @@ Go 的 `Mutex` 主要有两种模式：
 - `gin.Context` 不是线程安全的，不能直接传递给异步的 `Goroutine`。因为 `gin` 为了减少 `GC` 压力，使用了 `sync.Pool` 复用 `Context` 对象。当请求处理结束返回后，`Context` 会被重置并放回池中，供下一个请求使用。如果异步 `Goroutine` 继续读写这个 `Context`，会导致数据竞争或拿到脏数据。
 - 洋葱模型
 
+## 常见题目
+### 交替打印
+
+双channel缓冲解法：
+
+```go
+// channel 仅同步信号，不传递数据
+// 推荐解法
+func main() {
+	ch0 := make(chan struct{}, 1)
+	ch1 := make(chan struct{}, 1)
+
+	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		for range 5 {
+			<-ch0
+			fmt.Println(0)
+			ch1<-struct{}{}
+		}
+	})
+
+	wg.Go(func() {
+		for range 5 {
+			<-ch1
+			fmt.Println(1)
+			ch0<-struct{}{}
+		}
+	})
+
+	ch0<-struct{}{}
+
+	wg.Wait()
+}
+```
+
+```go
+// channel 传递数据
+func main() {
+	ch0 := make(chan int, 1)
+	ch1 := make(chan int, 1)
+
+	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		for range 5 {
+			num := <-ch0
+			fmt.Println(num)
+			ch1 <- 1
+		}
+	})
+
+	wg.Go(func() {
+		for range 5 {
+			num := <-ch1
+			fmt.Println(num)
+			ch0 <- 0
+		}
+	})
+
+	ch0 <- 0
+
+	wg.Wait()
+}
+```
+
+无缓冲解法：
+
+```go
+func main() {
+	ch := make(chan struct{}) // 必须无缓冲
+	var wg sync.WaitGroup
+
+	wg.Go(func() { // 只打 0
+		for i := 0; i < 5; i++ {
+			fmt.Print(0)
+			ch <- struct{}{} // 阻塞，直到 B 收走
+			<-ch             // 等 B 打完的回执，再进下一轮
+		}
+	})
+
+	wg.Go(func() { // 只打 1
+		for i := 0; i < 5; i++ {
+			<-ch
+			fmt.Print(1)
+			ch <- struct{}{}
+		}
+	})
+
+	wg.Wait()
+}
+```
