@@ -44,6 +44,17 @@
 - 对象或属性访问使用 `->` 而非 `.`
 - 函数通过数组返回多值
 
+### 变量名与函数名风格
+
+| 语言 | 变量名风格 | 函数名风格 | 文件名风格 |
+|------|-----------|-----------|-----------|
+| Go | 驼峰（`camelCase`）| 驼峰（`camelCase`）| 蛇形（`snake_case.go`）|
+| Python | 蛇形（`snake_case`）| 蛇形（`snake_case`）| 蛇形（`snake_case.py`）|
+| Rust | 蛇形（`snake_case`）| 蛇形（`snake_case`）| 蛇形（`snake_case.rs`）|
+| Java | 驼峰（`camelCase`）| 驼峰（`camelCase`）| 大驼峰（`PascalCase.java`）|
+| JavaScript | 驼峰（`camelCase`）| 驼峰（`camelCase`）| 短横线（`kebab-case.js`）|
+| PHP | 驼峰（`camelCase`）| 方法用驼峰，函数用蛇形 | 大驼峰（`PascalCase.php`）|
+
 ## 并发调度模型
 所有主流语言（C、C++、Java、Rust）的原生线程都是受操作系统内核控制的**抢占式**调度。协程调度则分为以下两种：
 
